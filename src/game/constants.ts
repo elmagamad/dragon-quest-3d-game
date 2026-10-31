@@ -2,16 +2,17 @@
 
 export const GRAVITY = 30;
 export const MAX_FALL_SPEED = 40;
+jumpSpeed = sqrt(2 * gravity * desiredJumpHeight)
 
 // Jump height
-export const JUMP_VELOCITY = 18;
+export const JUMP_VELOCITY = 29;
 
 export const MOVE_SPEED = 7;
 export const GROUND_ACCEL = 14;
 export const AIR_ACCEL = 6;
 
 export const COYOTE_TIME = 0.1;
-export const JUMP_BUFFER_TIME = 0.15;
+export const JUMP_BUFFER_TIME = 0.35;
 
 export const KNOCKBACK_STUN = 0.3;
 export const HURT_INVULNERABLE_TIME = 1.5;
@@ -32,7 +33,7 @@ export const ENEMY_HALF_WIDTH = 0.42;
 export const ENEMY_HEIGHT = 0.8;
 export const ENEMY_SPEED = 1.6;
 
-export const STOMP_BOUNCE = 8;
+export const STOMP_BOUNCE = 12;
 
 export const KNOCKBACK_SPEED_X = 6;
 export const KNOCKBACK_SPEED_Y = 6;
