@@ -72,7 +72,7 @@ export function GameScene({
       camera.updateProjectionMatrix();
     }
 
-    const follow = 1 - Math.exp(-CAMERA_SMOOTHING * dt;
+    const follow = 1 - Math.exp(-CAMERA_SMOOTHING * dt);
     const distance = portrait ? 13 : 10.5;
     const height = portrait ? 2.8 : 3.4;
 
