@@ -73,6 +73,7 @@ export function GameCanvas({
         gl={{ antialias: true }}
       >
         <color attach="background" args={[PALETTE.sky]} />
+
         <fog attach="fog" args={[PALETTE.fog, 38, 120]} />
 
         <hemisphereLight
@@ -103,25 +104,27 @@ export function GameCanvas({
         />
       </Canvas>
 
-      {/* Developer Button */}
+      {/* Fixed Developer Button */}
       {active && (
         <button
+          type="button"
           onClick={() => setDevMenuVisible(true)}
           style={{
-            position: 'absolute',
-            top: 70,
-            right: 15,
-            width: 55,
-            height: 55,
-            borderRadius: '50%',
+            position: 'fixed',
+            top: 12,
+            right: 12,
+            width: 52,
+            height: 52,
+            borderRadius: 14,
             border: '2px solid #fbbf24',
             background: '#111827',
             color: '#fbbf24',
-            fontSize: 27,
-            zIndex: 9999,
+            fontSize: 26,
+            fontWeight: 'bold',
+            zIndex: 99999,
             cursor: 'pointer',
             touchAction: 'manipulation',
-            boxShadow: '0 4px 15px rgba(0,0,0,0.5)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
           }}
         >
           ⚙️
@@ -132,36 +135,38 @@ export function GameCanvas({
       {devMenuVisible && (
         <div
           style={{
-            position: 'absolute',
+            position: 'fixed',
             inset: 0,
-            zIndex: 10000,
+            zIndex: 100000,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             background: 'rgba(0,0,0,0.85)',
             backdropFilter: 'blur(8px)',
-            padding: 20,
+            padding: 16,
           }}
         >
           <div
             style={{
               width: '100%',
               maxWidth: 340,
+              maxHeight: '90dvh',
+              overflowY: 'auto',
               padding: 22,
               borderRadius: 20,
               background: '#111827',
               border: '2px solid #fbbf24',
               color: 'white',
               fontFamily: 'sans-serif',
-              maxHeight: '90%',
-              overflowY: 'auto',
+              boxSizing: 'border-box',
             }}
           >
             <h2
               style={{
                 color: '#fbbf24',
-                margin: '0 0 5px',
+                margin: '0 0 8px',
                 textAlign: 'center',
+                fontSize: 22,
               }}
             >
               🛠 Developer Menu
@@ -179,6 +184,7 @@ export function GameCanvas({
             </p>
 
             <button
+              type="button"
               onClick={() => sendCommand('boss')}
               style={buttonStyle}
             >
@@ -186,6 +192,7 @@ export function GameCanvas({
             </button>
 
             <button
+              type="button"
               onClick={() => sendCommand('god')}
               style={buttonStyle}
             >
@@ -193,6 +200,7 @@ export function GameCanvas({
             </button>
 
             <button
+              type="button"
               onClick={() => sendCommand('kill')}
               style={buttonStyle}
             >
@@ -200,6 +208,7 @@ export function GameCanvas({
             </button>
 
             <button
+              type="button"
               onClick={() => sendCommand('complete')}
               style={{
                 ...buttonStyle,
@@ -210,6 +219,7 @@ export function GameCanvas({
             </button>
 
             <button
+              type="button"
               onClick={() => setDevMenuVisible(false)}
               style={{
                 ...buttonStyle,
@@ -223,6 +233,7 @@ export function GameCanvas({
         </div>
       )}
 
+      {/* Boss Intro */}
       <BossIntro
         show={bossIntroVisible && active}
         onComplete={() => {
@@ -246,4 +257,5 @@ const buttonStyle: CSSProperties = {
   fontSize: 14,
   fontWeight: 600,
   cursor: 'pointer',
+  touchAction: 'manipulation',
 };
