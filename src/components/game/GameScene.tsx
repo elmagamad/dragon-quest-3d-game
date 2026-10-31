@@ -8,7 +8,9 @@ import { Portal } from '@/components/game/pickups/Portal';
 import { Knight } from '@/components/game/characters/Knight';
 import { Brute } from '@/components/game/characters/Brute';
 import { Thornling } from '@/components/game/characters/Thornling';
+
 import { ForestGuardian } from '@/components/game/ForestGuardian';
+import { ShadowBeast } from '@/components/game/ShadowBeast';
 
 import { Fireflies } from '@/components/game/world/Fireflies';
 import { ForestDecor } from '@/components/game/world/ForestDecor';
@@ -23,8 +25,6 @@ const MAX_FRAME_STEP = 1 / 30;
 const CAMERA_SMOOTHING = 6;
 
 const BOSS_X = 100;
-const BOSS_MAX_HEALTH = 100;
-const BOSS_DAMAGE = 10;
 const BOSS_REACH = 2.2;
 
 interface GameSceneProps {
@@ -49,7 +49,9 @@ export function GameScene({
   const [sim, setSim] = useState(() => createSim(level));
 
   const [bossTriggered, setBossTriggered] = useState(false);
-  const [bossHealth, setBossHealth] = useState(BOSS_MAX_HEALTH);
+  const [bossHealth, setBossHealth] = useState(
+    level.name === 'Level 2' ? 150 : 100
+  );
   const [bossDefeated, setBossDefeated] = useState(false);
   const [bossHit, setBossHit] = useState(false);
   const [godMode, setGodMode] = useState(false);
@@ -59,12 +61,19 @@ export function GameScene({
   const bossAttackTimer = useRef(2);
   const victorySent = useRef(false);
 
-  const hasBoss = level.name === 'Level 1';
+  const hasBoss =
+    level.name === 'Level 1' ||
+    level.name === 'Level 2';
+
+  const isShadowBeast = level.name === 'Level 2';
+
+  const bossMaxHealth = isShadowBeast ? 150 : 100;
+  const bossDamage = isShadowBeast ? 15 : 10;
 
   useEffect(() => {
     setSim(createSim(level));
     setBossTriggered(false);
-    setBossHealth(BOSS_MAX_HEALTH);
+    setBossHealth(bossMaxHealth);
     setBossDefeated(false);
     setBossHit(false);
     setGodMode(false);
@@ -73,9 +82,9 @@ export function GameScene({
     hitTimer.current = 0;
     bossAttackTimer.current = 2;
     victorySent.current = false;
-  }, [runId, level]);
+  }, [runId, level, bossMaxHealth]);
 
-  // Developer menu commands from GameCanvas
+  // Developer menu commands
   useEffect(() => {
     const handleDevCommand = (event: Event) => {
       const customEvent = event as CustomEvent<string>;
@@ -188,7 +197,8 @@ export function GameScene({
 
           const nextHealth = Math.max(
             0,
-            bossHealth - (godMode ? BOSS_MAX_HEALTH : BOSS_DAMAGE)
+            bossHealth -
+              (godMode ? bossMaxHealth : 10)
           );
 
           setBossHealth(nextHealth);
@@ -207,7 +217,9 @@ export function GameScene({
       if (hasBoss && bossTriggered && bossFightStarted) {
         bossAttackTimer.current -= dt;
 
-        const distanceToBoss = Math.abs(player.x - BOSS_X);
+        const distanceToBoss = Math.abs(
+          player.x - BOSS_X
+        );
 
         if (
           !godMode &&
@@ -290,13 +302,23 @@ export function GameScene({
       )}
 
       {hasBoss && bossTriggered && (
-        <ForestGuardian
-          position={[BOSS_X, 0, -3]}
-          health={bossHealth}
-          maxHealth={BOSS_MAX_HEALTH}
-          hit={bossHit}
-          defeated={bossDefeated}
-        />
+        isShadowBeast ? (
+          <ShadowBeast
+            position={[BOSS_X, 0, -3]}
+            health={bossHealth}
+            maxHealth={bossMaxHealth}
+            hit={bossHit}
+            defeated={bossDefeated}
+          />
+        ) : (
+          <ForestGuardian
+            position={[BOSS_X, 0, -3]}
+            health={bossHealth}
+            maxHealth={bossMaxHealth}
+            hit={bossHit}
+            defeated={bossDefeated}
+          />
+        )
       )}
 
       <Portal
