@@ -2,7 +2,7 @@
 
 export const GRAVITY = 30;
 export const MAX_FALL_SPEED = 40;
-jumpSpeed = sqrt(2 * gravity * desiredJumpHeight)
+
 
 // Jump height
 export const JUMP_VELOCITY = 29;
