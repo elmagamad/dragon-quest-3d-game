@@ -1,3 +1,4 @@
+
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Group } from 'three';
@@ -5,34 +6,48 @@ import { Group } from 'three';
 interface ForestGuardianProps {
   position?: [number, number, number];
   defeated?: boolean;
+  hit?: boolean;
 }
 
 export function ForestGuardian({
   position = [0, 0, -8],
   defeated = false,
+  hit = false,
 }: ForestGuardianProps) {
   const guardian = useRef<Group>(null);
 
   useFrame((state, delta) => {
     if (!guardian.current || defeated) return;
 
-    guardian.current.rotation.y += delta * 0.4;
+    const time = state.clock.elapsedTime;
+
+    guardian.current.rotation.y = Math.sin(time * 0.5) * 0.15;
     guardian.current.position.y =
-      position[1] + Math.sin(state.clock.elapsedTime * 1.5) * 0.15;
+      position[1] + Math.sin(time * 1.5) * 0.15;
+
+    if (hit) {
+      guardian.current.position.x =
+        position[0] + Math.sin(time * 35) * 0.08;
+    } else {
+      guardian.current.position.x = position[0];
+    }
   });
+
+  const bodyColor = hit ? '#ff7777' : '#315b35';
+  const headColor = hit ? '#ffaaaa' : '#527c3e';
 
   return (
     <group ref={guardian} position={position}>
       {/* Body */}
       <mesh position={[0, 1.8, 0]} castShadow>
         <cylinderGeometry args={[0.9, 1.2, 2, 6]} />
-        <meshStandardMaterial color="#315b35" flatShading />
+        <meshStandardMaterial color={bodyColor} flatShading />
       </mesh>
 
       {/* Head */}
       <mesh position={[0, 3.1, 0]} castShadow>
         <sphereGeometry args={[0.75, 8, 8]} />
-        <meshStandardMaterial color="#527c3e" flatShading />
+        <meshStandardMaterial color={headColor} flatShading />
       </mesh>
 
       {/* Glowing eyes */}
@@ -68,7 +83,7 @@ export function ForestGuardian({
         <meshStandardMaterial color="#3b4828" flatShading />
       </mesh>
 
-      {/* Crown / branches */}
+      {/* Crown branches */}
       <mesh position={[-0.5, 4, 0]} rotation={[0, 0, -0.5]} castShadow>
         <coneGeometry args={[0.35, 1.2, 5]} />
         <meshStandardMaterial color="#244d20" flatShading />
