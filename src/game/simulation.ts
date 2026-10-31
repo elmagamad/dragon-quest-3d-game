@@ -24,6 +24,7 @@ import {
 } from '@/game/constants';
 
 import type { InputState } from '@/game/input';
+
 import {
   hurtPlayer,
   applySwordHits,
@@ -45,6 +46,7 @@ import type {
   EnemyState,
 } from '@/game/types';
 
+// Determine the number of jumps available in each level.
 function getMaxJumps(level: LevelDef): number {
   if (level.maxJumps !== undefined) {
     return Math.max(1, level.maxJumps);
@@ -53,6 +55,7 @@ function getMaxJumps(level: LevelDef): number {
   if (level.name === 'Level 1') return 1;
   if (level.name === 'Level 2') return 2;
 
+  // Level 3 and all future levels default to triple jump.
   return 3;
 }
 
@@ -101,12 +104,17 @@ function createEnemy(
   };
 }
 
+// Create a fresh game simulation.
 export function createSim(level: LevelDef): Sim {
   const maxJumps = getMaxJumps(level);
 
   return {
     level,
-    boxes: [...level.platforms.map(platformBox), ...level.walls],
+
+    boxes: [
+      ...level.platforms.map(platformBox),
+      ...level.walls,
+    ],
 
     player: {
       x: level.spawn.x,
@@ -114,7 +122,11 @@ export function createSim(level: LevelDef): Sim {
       vx: 0,
       vy: 0,
       onGround: false,
+
+      // Jump system
       jumpsRemaining: maxJumps,
+      jumpCount: 0,
+
       groundY: level.spawn.y,
       coyote: 0,
       jumpBuffer: 0,
@@ -144,6 +156,7 @@ export function createSim(level: LevelDef): Sim {
   };
 }
 
+// Respawn player at the current checkpoint.
 function respawnAtCheckpoint(sim: Sim) {
   const p = sim.player;
   const cp = sim.level.checkpoints[p.checkpoint];
@@ -155,12 +168,20 @@ function respawnAtCheckpoint(sim: Sim) {
   p.stun = 0;
   p.onGround = false;
   p.groundY = cp.y;
+
+  // Reset jump abilities after respawn.
   p.jumpsRemaining = getMaxJumps(sim.level);
+  p.jumpCount = 0;
   p.coyote = 0;
   p.jumpBuffer = 0;
 }
 
-function updateEnemies(sim: Sim, dt: number, events: SimEvent[]) {
+// Update all enemies.
+function updateEnemies(
+  sim: Sim,
+  dt: number,
+  events: SimEvent[],
+) {
   for (const e of sim.enemies) {
     if (!e.alive) {
       e.deadTime += dt;
@@ -178,6 +199,7 @@ function updateEnemies(sim: Sim, dt: number, events: SimEvent[]) {
   }
 }
 
+// Handle collisions between player and enemies.
 function collideEnemies(
   sim: Sim,
   prevFeetY: number,
@@ -189,7 +211,8 @@ function collideEnemies(
     if (!e.alive || e.kind !== 'thornling') continue;
 
     const touchX =
-      Math.abs(p.x - e.x) < PLAYER_HALF_WIDTH + ENEMY_HALF_WIDTH;
+      Math.abs(p.x - e.x) <
+      PLAYER_HALF_WIDTH + ENEMY_HALF_WIDTH;
 
     const touchY =
       p.y < e.y + ENEMY_HEIGHT &&
@@ -199,11 +222,14 @@ function collideEnemies(
 
     const enemyTop = e.y + ENEMY_HEIGHT;
 
+    // Jumping on top of an enemy defeats it.
     if (p.vy < 0 && prevFeetY >= enemyTop - 0.25) {
       e.alive = false;
       e.deadTime = 0;
+
       p.vy = STOMP_BOUNCE;
       p.onGround = false;
+
       continue;
     }
 
@@ -213,14 +239,19 @@ function collideEnemies(
   }
 }
 
-function collectCoins(sim: Sim, events: SimEvent[]) {
+// Collect coins touched by the player.
+function collectCoins(
+  sim: Sim,
+  events: SimEvent[],
+) {
   const p = sim.player;
 
   for (const c of sim.coins) {
     if (c.collected) continue;
 
     const touchX =
-      Math.abs(p.x - c.x) < PLAYER_HALF_WIDTH + COIN_RADIUS;
+      Math.abs(p.x - c.x) <
+      PLAYER_HALF_WIDTH + COIN_RADIUS;
 
     const touchY =
       p.y < c.y + COIN_RADIUS &&
@@ -228,11 +259,15 @@ function collectCoins(sim: Sim, events: SimEvent[]) {
 
     if (touchX && touchY) {
       c.collected = true;
-      events.push({ type: 'coin', amount: 1 });
+      events.push({
+        type: 'coin',
+        amount: 1,
+      });
     }
   }
 }
 
+// Activate checkpoints when the player reaches them.
 function updateCheckpoints(sim: Sim) {
   const p = sim.player;
   const cps = sim.level.checkpoints;
@@ -245,23 +280,35 @@ function updateCheckpoints(sim: Sim) {
   }
 }
 
-function checkPortal(sim: Sim, events: SimEvent[]) {
+// Check whether the player has reached the portal.
+function checkPortal(
+  sim: Sim,
+  events: SimEvent[],
+) {
   if (!sim.enemies.every((e) => !e.alive)) return;
 
   const p = sim.player;
   const portal = sim.level.portal;
 
   const dx = p.x - portal.x;
+
   const dy =
     p.y + PLAYER_CENTER_HEIGHT -
     (portal.y + PORTAL_RADIUS);
 
-  if (dx * dx + dy * dy < PORTAL_RADIUS * PORTAL_RADIUS) {
+  if (
+    dx * dx + dy * dy <
+    PORTAL_RADIUS * PORTAL_RADIUS
+  ) {
     sim.outcome = 'won';
-    events.push({ type: 'won' });
+
+    events.push({
+      type: 'won',
+    });
   }
 }
 
+// Main game simulation step.
 export function stepSim(
   sim: Sim,
   input: InputState,
@@ -269,18 +316,22 @@ export function stepSim(
 ): SimEvent[] {
   const events: SimEvent[] = [];
 
-  if (sim.outcome !== 'running') return events;
+  if (sim.outcome !== 'running') {
+    return events;
+  }
 
   const p = sim.player;
   const maxJumps = getMaxJumps(sim.level);
 
   sim.elapsed += dt;
+
   p.anim += dt;
   p.invuln = Math.max(0, p.invuln - dt);
   p.stun = Math.max(0, p.stun - dt);
 
   tickSwing(p, dt);
 
+  // Attack input.
   if (input.attack) {
     input.attack = false;
 
@@ -293,75 +344,116 @@ export function stepSim(
     }
   }
 
+  // Movement input.
   const direction =
     (input.right ? 1 : 0) -
     (input.left ? 1 : 0);
 
+  // Buffer the jump input.
   if (input.jump) {
     p.jumpBuffer = JUMP_BUFFER_TIME;
     input.jump = false;
   }
 
+  // Horizontal movement.
   if (p.stun <= 0) {
     if (direction !== 0) {
       p.facing = direction > 0 ? 1 : -1;
     }
 
-    const accel = p.onGround ? GROUND_ACCEL : AIR_ACCEL;
+    const accel = p.onGround
+      ? GROUND_ACCEL
+      : AIR_ACCEL;
 
     p.vx +=
       (direction * MOVE_SPEED - p.vx) *
       Math.min(1, accel * dt);
   }
 
-  p.jumpBuffer = Math.max(0, p.jumpBuffer - dt);
+  // Update jump buffer timer.
+  p.jumpBuffer = Math.max(
+    0,
+    p.jumpBuffer - dt,
+  );
 
-  // Restore all available jumps when landing.
+  // Restore jumps when standing on the ground.
   if (p.onGround) {
     p.jumpsRemaining = maxJumps;
+    p.jumpCount = 0;
   }
 
-  // First jump, double jump, and triple jump.
+  // Single jump, double jump, or triple jump.
   if (
     p.jumpBuffer > 0 &&
     p.jumpsRemaining > 0 &&
-    (p.onGround || p.coyote > 0 || p.jumpsRemaining < maxJumps)
+    (
+      p.onGround ||
+      p.coyote > 0 ||
+      p.jumpsRemaining < maxJumps
+    )
   ) {
+    // Record which jump is being performed.
+    p.jumpCount =
+      maxJumps - p.jumpsRemaining + 1;
+
+    // Apply jump velocity.
     p.vy = JUMP_VELOCITY;
+
     p.onGround = false;
     p.jumpBuffer = 0;
     p.coyote = 0;
+
+    // Consume one available jump.
     p.jumpsRemaining -= 1;
   }
 
+  // Save previous player position for collision checks.
   const prevFeetY = p.y;
 
+  // Apply physics and collisions with platforms.
   movePlayer(p, sim.boxes, dt);
 
-  // Restore jumps immediately after detecting ground contact.
+  // Restore all jumps immediately upon landing.
   if (p.onGround) {
     p.jumpsRemaining = maxJumps;
+    p.jumpCount = 0;
   }
 
+  // Update coyote time.
   p.coyote = p.onGround
     ? COYOTE_TIME
     : Math.max(0, p.coyote - dt);
 
+  // Update enemies.
   updateEnemies(sim, dt, events);
 
-  if (sim.outcome !== 'running') return events;
+  if (sim.outcome !== 'running') {
+    return events;
+  }
 
+  // Combat.
   applySwordHits(sim, events);
-  collideEnemies(sim, prevFeetY, events);
 
-  if (sim.outcome !== 'running') return events;
+  collideEnemies(
+    sim,
+    prevFeetY,
+    events,
+  );
 
+  if (sim.outcome !== 'running') {
+    return events;
+  }
+
+  // Coins, checkpoints, and portal.
   collectCoins(sim, events);
   updateCheckpoints(sim);
   checkPortal(sim, events);
 
-  if (sim.outcome !== 'running') return events;
+  if (sim.outcome !== 'running') {
+    return events;
+  }
 
+  // Fall damage and checkpoint respawn.
   if (p.y < FALL_LIMIT) {
     hurtPlayer(sim, p.x, events);
 
