@@ -56,6 +56,7 @@ export interface PlayerState {
   vx: number;
   vy: number;
   onGround: boolean;
+  jumpsRemaining: number;
   groundY: number;
   coyote: number;
   jumpBuffer: number;
