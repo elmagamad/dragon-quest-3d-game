@@ -64,11 +64,17 @@ export function GameScene({
   useFrame((_, delta) => {
     const dt = Math.min(delta, MAX_FRAME_STEP);
 
-    if (active && !bossTriggered && sim.player.x >= BOSS_TRIGGER_X) {
+    // Trigger the boss cinematic
+    if (
+      active &&
+      !bossTriggered &&
+      sim.player.x >= BOSS_TRIGGER_X
+    ) {
       setBossTriggered(true);
       onBossTrigger();
     }
 
+    // Boss hit visual timer
     if (hitTimer.current > 0) {
       hitTimer.current -= dt;
 
@@ -77,34 +83,25 @@ export function GameScene({
       }
     }
 
+    // Game simulation
     if (
       active &&
       (!bossTriggered || bossFightStarted) &&
       !bossDefeated
     ) {
-      const safeInput =
-  bossTriggered && !bossFightStarted
-    ? {
-        ...input,
-        left: false,
-        right: false,
-        jump: false,
-        attack: false,
-      }
-    : input;
+      // Freeze player controls during boss introduction
+      const safeInput: InputState =
+        bossTriggered && !bossFightStarted
+          ? {
+              ...input,
+              left: false,
+              right: false,
+              jump: false,
+              attack: false,
+            }
+          : input;
 
-const events = stepSim(sim, safeInput, dt);
-  bossTriggered && !bossFightStarted
-    ? {
-        ...input,
-        left: false,
-        right: false,
-        jump: false,
-        attack: false,
-      }
-    : input,
-  dt
-);
+      const events = stepSim(sim, safeInput, dt);
 
       for (const event of events) {
         onEvent(event);
@@ -127,9 +124,12 @@ const events = stepSim(sim, safeInput, dt);
         if (facingBoss && inRange && player.y < 2.5) {
           lastBossHitSwing.current = player.swingId;
 
-          const nextHealth = Math.max(0, bossHealth - BOSS_DAMAGE);
-          setBossHealth(nextHealth);
+          const nextHealth = Math.max(
+            0,
+            bossHealth - BOSS_DAMAGE
+          );
 
+          setBossHealth(nextHealth);
           setBossHit(true);
           hitTimer.current = 0.25;
 
@@ -153,7 +153,10 @@ const events = stepSim(sim, safeInput, dt);
           hurtPlayer(sim, 100, events);
 
           for (const event of events) {
-            if (event.type === 'hurt' || event.type === 'defeated') {
+            if (
+              event.type === 'hurt' ||
+              event.type === 'defeated'
+            ) {
               onEvent(event);
             }
           }
@@ -163,9 +166,12 @@ const events = stepSim(sim, safeInput, dt);
       }
     }
 
+    // Camera follow
     const { player } = sim;
 
-    const portrait = viewport.width / viewport.height < 0.8;
+    const portrait =
+      viewport.width / viewport.height < 0.8;
+
     const targetFov = portrait ? 55 : 46;
 
     if (camera.fov !== targetFov) {
@@ -173,13 +179,20 @@ const events = stepSim(sim, safeInput, dt);
       camera.updateProjectionMatrix();
     }
 
-    const follow = 1 - Math.exp(-CAMERA_SMOOTHING * dt);
+    const follow =
+      1 - Math.exp(-CAMERA_SMOOTHING * dt);
+
     const distance = portrait ? 13 : 10.5;
     const height = portrait ? 2.8 : 3.4;
 
-    camera.position.x += (player.x - camera.position.x) * follow;
-    camera.position.y += (player.y + height - camera.position.y) * follow;
-    camera.position.z += (distance - camera.position.z) * follow;
+    camera.position.x +=
+      (player.x - camera.position.x) * follow;
+
+    camera.position.y +=
+      (player.y + height - camera.position.y) * follow;
+
+    camera.position.z +=
+      (distance - camera.position.z) * follow;
 
     focus.set(player.x, player.y + 1, 0);
     camera.lookAt(focus);
@@ -188,7 +201,9 @@ const events = stepSim(sim, safeInput, dt);
   return (
     <>
       <Platforms platforms={sim.level.platforms} />
+
       <ForestDecor platforms={sim.level.platforms} />
+
       <Fireflies />
 
       <Knight player={sim.player} />
@@ -203,7 +218,7 @@ const events = stepSim(sim, safeInput, dt);
 
       {sim.coins.map((coin, i) => (
         <Coin key={i} coin={coin} />
-      ))}
+      )}
 
       {bossTriggered && (
         <ForestGuardian
