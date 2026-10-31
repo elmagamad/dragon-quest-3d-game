@@ -64,7 +64,7 @@ export function GameScene({
   useFrame((_, delta) => {
     const dt = Math.min(delta, MAX_FRAME_STEP);
 
-    // Trigger the boss cinematic
+    // Trigger boss introduction
     if (
       active &&
       !bossTriggered &&
@@ -83,13 +83,13 @@ export function GameScene({
       }
     }
 
-    // Game simulation
+    // Main game simulation
     if (
       active &&
       (!bossTriggered || bossFightStarted) &&
       !bossDefeated
     ) {
-      // Freeze player controls during boss introduction
+      // Freeze player controls during cinematic
       const safeInput: InputState =
         bossTriggered && !bossFightStarted
           ? {
@@ -109,7 +109,7 @@ export function GameScene({
 
       const player = sim.player;
 
-      // Detect a successful sword hit on the boss
+      // Player sword attacks Forest Guardian
       if (
         bossTriggered &&
         bossFightStarted &&
@@ -134,16 +134,13 @@ export function GameScene({
           hitTimer.current = 0.25;
 
           if (nextHealth <= 0) {
-  setBossDefeated(true);
-  onEvent({ type: 'won' });
-}
-  onEvent({ type: 'boss-defeated' } as SimEvent);
-}
+            setBossDefeated(true);
+            onEvent({ type: 'won' });
           }
         }
       }
 
-      // Boss attacks the player when nearby
+      // Forest Guardian attacks the player
       if (bossTriggered && bossFightStarted) {
         bossAttackTimer.current -= dt;
 
