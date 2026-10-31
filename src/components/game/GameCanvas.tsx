@@ -1,5 +1,7 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import type { CSSProperties } from 'react';
+
 import { Canvas } from '@react-three/fiber';
 import { Sky } from '@react-three/drei';
 
@@ -34,28 +36,11 @@ export function GameCanvas({
   const [devMenuVisible, setDevMenuVisible] =
     useState(false);
 
-  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(
-    null
-  );
-
   useEffect(() => {
     setBossIntroVisible(false);
     setBossFightStarted(false);
     setDevMenuVisible(false);
   }, [runId, level]);
-
-  const startLongPress = () => {
-    pressTimer.current = setTimeout(() => {
-      setDevMenuVisible(true);
-    }, 1500);
-  };
-
-  const cancelLongPress = () => {
-    if (pressTimer.current) {
-      clearTimeout(pressTimer.current);
-      pressTimer.current = null;
-    }
-  };
 
   const sendCommand = (command: string) => {
     window.dispatchEvent(
@@ -63,6 +48,7 @@ export function GameCanvas({
         detail: command,
       })
     );
+
     setDevMenuVisible(false);
   };
 
@@ -117,28 +103,25 @@ export function GameCanvas({
         />
       </Canvas>
 
-      {/* Fixed Secret Developer Button */}
+      {/* Developer Button */}
       {active && (
         <button
-          onPointerDown={startLongPress}
-          onPointerUp={cancelLongPress}
-          onPointerLeave={cancelLongPress}
-          onContextMenu={(e) => e.preventDefault()}
+          onClick={() => setDevMenuVisible(true)}
           style={{
             position: 'absolute',
             top: 70,
             right: 15,
-            width: 50,
-            height: 50,
+            width: 55,
+            height: 55,
             borderRadius: '50%',
-            border: '2px solid rgba(255,255,255,0.5)',
-            background: 'rgba(17,24,39,0.85)',
+            border: '2px solid #fbbf24',
+            background: '#111827',
             color: '#fbbf24',
-            fontSize: 24,
+            fontSize: 27,
             zIndex: 9999,
             cursor: 'pointer',
-            touchAction: 'none',
-            boxShadow: '0 4px 15px rgba(0,0,0,0.4)',
+            touchAction: 'manipulation',
+            boxShadow: '0 4px 15px rgba(0,0,0,0.5)',
           }}
         >
           ⚙️
@@ -155,7 +138,7 @@ export function GameCanvas({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'rgba(0,0,0,0.8)',
+            background: 'rgba(0,0,0,0.85)',
             backdropFilter: 'blur(8px)',
             padding: 20,
           }}
@@ -163,45 +146,76 @@ export function GameCanvas({
           <div
             style={{
               width: '100%',
-              maxWidth: 320,
+              maxWidth: 340,
               padding: 22,
               borderRadius: 20,
               background: '#111827',
-              border: '1px solid #374151',
+              border: '2px solid #fbbf24',
               color: 'white',
               fontFamily: 'sans-serif',
+              maxHeight: '90%',
+              overflowY: 'auto',
             }}
           >
-            <h2 style={{ color: '#fbbf24', margin: '0 0 5px' }}>
+            <h2
+              style={{
+                color: '#fbbf24',
+                margin: '0 0 5px',
+                textAlign: 'center',
+              }}
+            >
               🛠 Developer Menu
             </h2>
 
-            <p style={{ color: '#9ca3af', fontSize: 12 }}>
-              TESTING TOOLS
+            <p
+              style={{
+                color: '#9ca3af',
+                fontSize: 12,
+                textAlign: 'center',
+                marginBottom: 20,
+              }}
+            >
+              GAME TESTING TOOLS
             </p>
 
-            <button onClick={() => sendCommand('boss')} style={buttonStyle}>
+            <button
+              onClick={() => sendCommand('boss')}
+              style={buttonStyle}
+            >
               🌀 Teleport to Boss
             </button>
 
-            <button onClick={() => sendCommand('god')} style={buttonStyle}>
+            <button
+              onClick={() => sendCommand('god')}
+              style={buttonStyle}
+            >
               🛡️ Toggle God Mode
             </button>
 
-            <button onClick={() => sendCommand('kill')} style={buttonStyle}>
+            <button
+              onClick={() => sendCommand('kill')}
+              style={buttonStyle}
+            >
               ⚔️ Instant Kill Boss
             </button>
 
             <button
               onClick={() => sendCommand('complete')}
-              style={{ ...buttonStyle, background: '#166534' }}
+              style={{
+                ...buttonStyle,
+                background: '#166534',
+              }}
             >
               🏆 Complete Level
             </button>
 
             <button
               onClick={() => setDevMenuVisible(false)}
-              style={{ ...buttonStyle, background: '#374151' }}
+              style={{
+                ...buttonStyle,
+                background: '#374151',
+                marginBottom: 0,
+              }}
             >
               ✖ Close Menu
             </button>
@@ -220,12 +234,12 @@ export function GameCanvas({
   );
 }
 
-const buttonStyle: React.CSSProperties = {
+const buttonStyle: CSSProperties = {
   display: 'block',
   width: '100%',
-  padding: '13px 10px',
+  padding: '14px 10px',
   marginBottom: 10,
-  border: 'none',
+  border: '1px solid #4b5563',
   borderRadius: 10,
   background: '#1f2937',
   color: 'white',
