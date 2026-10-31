@@ -43,7 +43,8 @@ export function GameCanvas({
   }, [runId]);
 
   const handleVictory = () => {
-    setVictoryVisible(true);
+  setVictoryVisible(true);
+};
   };
 
   const handleNextLevel = () => {
