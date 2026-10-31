@@ -9,6 +9,7 @@ import { Knight } from '@/components/game/characters/Knight';
 import { Brute } from '@/components/game/characters/Brute';
 import { Thornling } from '@/components/game/characters/Thornling';
 import { ForestGuardian } from '@/components/game/ForestGuardian';
+import { BossIntro } from '@/components/game/BossIntro';
 
 import { Fireflies } from '@/components/game/world/Fireflies';
 import { ForestDecor } from '@/components/game/world/ForestDecor';
@@ -33,6 +34,7 @@ export function GameScene({ active, input, onEvent }: GameSceneProps) {
   const [sim] = useState(() => createSim(forestLevel1));
   const [bossTriggered, setBossTriggered] = useState(false);
   const [bossMessage, setBossMessage] = useState(false);
+  const [bossFightStarted, setBossFightStarted] = useState(false);
 
   const camera = useThree(
     (state) => state.camera
@@ -104,6 +106,14 @@ export function GameScene({ active, input, onEvent }: GameSceneProps) {
       <Portal
         position={sim.level.portal}
         enemies={sim.enemies}
+      />
+
+      <BossIntro
+        show={bossMessage}
+        onComplete={() => {
+          setBossMessage(false);
+          setBossFightStarted(true);
+        }}
       />
     </>
   );
