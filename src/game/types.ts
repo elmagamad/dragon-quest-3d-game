@@ -1,3 +1,4 @@
+
 export interface Vec2 {
   x: number;
   y: number;
@@ -27,6 +28,14 @@ export interface EnemySpawn {
   kind?: EnemyKind;
 }
 
+export interface BossDef {
+  name: string;
+  health: number;
+  damage: number;
+  reward: number;
+  position: number;
+}
+
 export interface LevelDef {
   name: string;
   world: string;
@@ -37,6 +46,7 @@ export interface LevelDef {
   checkpoints: Vec2[];
   spawn: Vec2;
   portal: Vec2;
+  boss?: BossDef;
 }
 
 export interface PlayerState {
