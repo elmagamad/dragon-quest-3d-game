@@ -21,6 +21,7 @@ import type { SimEvent } from '@/game/types';
 
 const MAX_FRAME_STEP = 1 / 30;
 const CAMERA_SMOOTHING = 6;
+const BOSS_TRIGGER_X = 100;
 
 interface GameSceneProps {
   active: boolean;
@@ -30,8 +31,8 @@ interface GameSceneProps {
 
 export function GameScene({ active, input, onEvent }: GameSceneProps) {
   const [sim] = useState(() => createSim(forestLevel1));
-const [bossTriggered, setBossTriggered] = useState(false);
-const [bossMessage, setBossMessage] = useState(false);
+  const [bossTriggered, setBossTriggered] = useState(false);
+  const [bossMessage, setBossMessage] = useState(false);
 
   const camera = useThree(
     (state) => state.camera
@@ -43,7 +44,12 @@ const [bossMessage, setBossMessage] = useState(false);
   useFrame((_, delta) => {
     const dt = Math.min(delta, MAX_FRAME_STEP);
 
-    if (active) {
+    if (active && !bossTriggered && sim.player.x >= BOSS_TRIGGER_X) {
+      setBossTriggered(true);
+      setBossMessage(true);
+    }
+
+    if (active && !bossMessage) {
       for (const event of stepSim(sim, input, dt)) {
         onEvent(event);
       }
@@ -91,7 +97,9 @@ const [bossMessage, setBossMessage] = useState(false);
         <Coin key={i} coin={coin} />
       ))}
 
-      <ForestGuardian position={[0, 0, -3]} />
+      {bossTriggered && (
+        <ForestGuardian position={[100, 0, -3]} />
+      )}
 
       <Portal
         position={sim.level.portal}
