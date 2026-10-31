@@ -1,5 +1,5 @@
 
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { PerspectiveCamera, Vector3 } from 'three';
 
@@ -15,21 +15,23 @@ import { ForestDecor } from '@/components/game/world/ForestDecor';
 import { Platforms } from '@/components/game/world/Platforms';
 
 import type { InputState } from '@/game/input';
-import { forestLevel1 } from '@/game/levels/forestLevel1';
 import { createSim, stepSim } from '@/game/simulation';
 import { hurtPlayer } from '@/game/combat';
-import type { SimEvent } from '@/game/types';
+import type { SimEvent, LevelDef } from '@/game/types';
 
 const MAX_FRAME_STEP = 1 / 30;
 const CAMERA_SMOOTHING = 6;
-const BOSS_TRIGGER_X = 100;
 
+const BOSS_TRIGGER_X = 100;
+const BOSS_POSITION_X = 100;
 const BOSS_MAX_HEALTH = 100;
 const BOSS_DAMAGE = 10;
 const BOSS_REACH = 2.2;
 
 interface GameSceneProps {
   active: boolean;
+  runId: number;
+  level: LevelDef;
   input: InputState;
   onEvent: (event: SimEvent) => void;
   bossFightStarted: boolean;
@@ -38,12 +40,14 @@ interface GameSceneProps {
 
 export function GameScene({
   active,
+  runId,
+  level,
   input,
   onEvent,
   bossFightStarted,
   onBossTrigger,
 }: GameSceneProps) {
-  const [sim] = useState(() => createSim(forestLevel1));
+  const [sim, setSim] = useState(() => createSim(level));
 
   const [bossTriggered, setBossTriggered] = useState(false);
   const [bossHealth, setBossHealth] = useState(BOSS_MAX_HEALTH);
@@ -53,6 +57,7 @@ export function GameScene({
   const lastBossHitSwing = useRef(-1);
   const hitTimer = useRef(0);
   const bossAttackTimer = useRef(2);
+  const victorySent = useRef(false);
 
   const camera = useThree(
     (state) => state.camera
@@ -61,12 +66,31 @@ export function GameScene({
   const viewport = useThree((state) => state.size);
   const focus = useMemo(() => new Vector3(), []);
 
+  // Reset simulation whenever a new run or level starts
+  useEffect(() => {
+    setSim(createSim(level));
+
+    setBossTriggered(false);
+    setBossHealth(BOSS_MAX_HEALTH);
+    setBossDefeated(false);
+    setBossHit(false);
+
+    lastBossHitSwing.current = -1;
+    hitTimer.current = 0;
+    bossAttackTimer.current = 2;
+    victorySent.current = false;
+  }, [runId, level]);
+const hasBoss = level.name === 'Level 1';
   useFrame((_, delta) => {
     const dt = Math.min(delta, MAX_FRAME_STEP);
+
+    // Boss encounter exists only in Level 1
+    const hasBoss = level.name === 'Level 1';
 
     // Trigger boss introduction
     if (
       active &&
+      hasBoss &&
       !bossTriggered &&
       sim.player.x >= BOSS_TRIGGER_X
     ) {
@@ -89,7 +113,6 @@ export function GameScene({
       (!bossTriggered || bossFightStarted) &&
       !bossDefeated
     ) {
-      // Freeze player controls during cinematic
       const safeInput: InputState =
         bossTriggered && !bossFightStarted
           ? {
@@ -109,66 +132,80 @@ export function GameScene({
 
       const player = sim.player;
 
-      // Player sword attacks Forest Guardian
-      if (
-        bossTriggered &&
-        bossFightStarted &&
-        player.swingTime >= 0.15 &&
-        player.swingTime <= 0.35 &&
-        player.swingId !== lastBossHitSwing.current
-      ) {
-        const dx = 100 - player.x;
-        const facingBoss = dx * player.facing > 0;
-        const inRange = Math.abs(dx) <= BOSS_REACH;
+      // Forest Guardian combat
+      if (hasBoss && bossTriggered && bossFightStarted) {
 
-        if (facingBoss && inRange && player.y < 2.5) {
-          lastBossHitSwing.current = player.swingId;
-
-          const nextHealth = Math.max(
-            0,
-            bossHealth - BOSS_DAMAGE
-          );
-
-          setBossHealth(nextHealth);
-          setBossHit(true);
-          hitTimer.current = 0.25;
-
-          if (nextHealth <= 0) {
-            setBossDefeated(true);
-            onEvent({ type: 'won' });
-          }
-        }
-      }
-
-      // Forest Guardian attacks the player
-      if (bossTriggered && bossFightStarted) {
-        bossAttackTimer.current -= dt;
-
-        const distanceToBoss = Math.abs(player.x - 100);
-
+        // Player sword attacks boss
         if (
-          bossAttackTimer.current <= 0 &&
-          distanceToBoss <= 3 &&
-          player.y < 2
+          player.swingTime >= 0.15 &&
+          player.swingTime <= 0.35 &&
+          player.swingId !== lastBossHitSwing.current
         ) {
-          hurtPlayer(sim, 100, events);
+          const dx = BOSS_POSITION_X - player.x;
+          const facingBoss = dx * player.facing > 0;
+          const inRange = Math.abs(dx) <= BOSS_REACH;
 
-          for (const event of events) {
+          if (facingBoss && inRange && player.y < 2.5) {
+            lastBossHitSwing.current = player.swingId;
+
+            const nextHealth = Math.max(
+              0,
+              bossHealth - BOSS_DAMAGE
+            );
+
+            setBossHealth(nextHealth);
+            setBossHit(true);
+            hitTimer.current = 0.25;
+
             if (
-              event.type === 'hurt' ||
-              event.type === 'defeated'
+              nextHealth <= 0 &&
+              !victorySent.current
             ) {
-              onEvent(event);
+              victorySent.current = true;
+              setBossDefeated(true);
+              onEvent({ type: 'won' });
             }
           }
+        }
 
-          bossAttackTimer.current = 2.5;
+        // Boss attacks player
+        if (!bossDefeated) {
+          bossAttackTimer.current -= dt;
+
+          const distanceToBoss = Math.abs(
+            player.x - BOSS_POSITION_X
+          );
+
+          if (
+            bossAttackTimer.current <= 0 &&
+            distanceToBoss <= 3 &&
+            player.y < 2
+          ) {
+            const attackEvents: SimEvent[] = [];
+
+            hurtPlayer(
+              sim,
+              BOSS_POSITION_X,
+              attackEvents
+            );
+
+            for (const event of attackEvents) {
+              if (
+                event.type === 'hurt' ||
+                event.type === 'defeated'
+              ) {
+                onEvent(event);
+              }
+            }
+
+            bossAttackTimer.current = 2.5;
+          }
         }
       }
     }
 
     // Camera follow
-    const { player } = sim;
+    const player = sim.player;
 
     const portrait =
       viewport.width / viewport.height < 0.8;
@@ -221,9 +258,9 @@ export function GameScene({
         <Coin key={i} coin={coin} />
       )}
 
-      {bossTriggered && (
+      {hasBoss && bossTriggered && (
         <ForestGuardian
-          position={[100, 0, -3]}
+          position={[BOSS_POSITION_X, 0, -3]}
           health={bossHealth}
           maxHealth={BOSS_MAX_HEALTH}
           hit={bossHit}
