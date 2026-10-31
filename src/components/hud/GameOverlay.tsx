@@ -6,6 +6,7 @@ import {
   Trophy,
   Coins,
   Sparkles,
+  LockKeyhole,
 } from 'lucide-react';
 
 export type OverlayKind =
@@ -26,8 +27,11 @@ export function GameOverlay({
   totalCoins,
   onPlay,
 }: GameOverlayProps) {
+  const bonus = kind === 'complete' ? 500 : 0;
+  const totalEarned = coins + bonus;
+
   return (
-    <div className="absolute inset-0 z-30 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+    <div className="absolute inset-0 z-30 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
       <div className="animate-rise w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-2xl sm:p-8">
 
         {kind === 'ready' && <ReadyContent />}
@@ -38,6 +42,7 @@ export function GameOverlay({
           <CompleteContent
             coins={coins}
             totalCoins={totalCoins}
+            totalEarned={totalEarned}
           />
         )}
 
@@ -64,7 +69,7 @@ export function GameOverlay({
           {kind === 'complete' && (
             <>
               <Sparkles className="h-5 w-5" />
-              Play again
+              Continue Adventure
             </>
           )}
         </button>
@@ -126,9 +131,11 @@ function DefeatedContent() {
 function CompleteContent({
   coins,
   totalCoins,
+  totalEarned,
 }: {
   coins: number;
   totalCoins: number;
+  totalEarned: number;
 }) {
   return (
     <>
@@ -143,7 +150,7 @@ function CompleteContent({
       </h2>
 
       <p className="mt-3 text-base leading-[1.6] text-slate-600">
-        You conquered the Enchanted Forest and defeated its mighty guardian!
+        You conquered the Enchanted Forest!
       </p>
 
       <div className="mt-5 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-100 px-4 py-4">
@@ -161,9 +168,27 @@ function CompleteContent({
           </span>
         </div>
 
-        <p className="mt-3 text-sm text-slate-600">
-          Coins collected: {coins} / {totalCoins}
-        </p>
+        <div className="mt-4 rounded-xl bg-white/80 p-3">
+          <p className="text-xs font-semibold text-slate-500">
+            TOTAL REWARD THIS RUN
+          </p>
+
+          <p className="mt-1 text-2xl font-black text-emerald-700">
+            🪙 {totalEarned} Coins
+          </p>
+
+          <p className="mt-2 text-sm text-slate-600">
+            Coins collected: {coins} / {totalCoins}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-emerald-100 p-3 text-emerald-800">
+        <LockKeyhole className="h-5 w-5" />
+
+        <span className="text-sm font-bold">
+          LEVEL 2 UNLOCKED!
+        </span>
       </div>
     </>
   );
