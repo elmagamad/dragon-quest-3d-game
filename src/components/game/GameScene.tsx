@@ -1,5 +1,5 @@
 
-import { useMemo, useRef, useState, useEffect } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { PerspectiveCamera, Vector3 } from 'three';
 
@@ -22,8 +22,7 @@ import type { SimEvent, LevelDef } from '@/game/types';
 const MAX_FRAME_STEP = 1 / 30;
 const CAMERA_SMOOTHING = 6;
 
-const BOSS_TRIGGER_X = 100;
-const BOSS_POSITION_X = 100;
+const BOSS_X = 100;
 const BOSS_MAX_HEALTH = 100;
 const BOSS_DAMAGE = 10;
 const BOSS_REACH = 2.2;
@@ -59,6 +58,20 @@ export function GameScene({
   const bossAttackTimer = useRef(2);
   const victorySent = useRef(false);
 
+  const hasBoss = level.name === 'Level 1';
+
+  useEffect(() => {
+    setSim(createSim(level));
+    setBossTriggered(false);
+    setBossHealth(BOSS_MAX_HEALTH);
+    setBossDefeated(false);
+    setBossHit(false);
+    lastBossHitSwing.current = -1;
+    hitTimer.current = 0;
+    bossAttackTimer.current = 2;
+    victorySent.current = false;
+  }, [runId, level]);
+
   const camera = useThree(
     (state) => state.camera
   ) as PerspectiveCamera;
@@ -66,39 +79,21 @@ export function GameScene({
   const viewport = useThree((state) => state.size);
   const focus = useMemo(() => new Vector3(), []);
 
-  // Reset simulation whenever a new run or level starts
-  useEffect(() => {
-    setSim(createSim(level));
-
-    setBossTriggered(false);
-    setBossHealth(BOSS_MAX_HEALTH);
-    setBossDefeated(false);
-    setBossHit(false);
-
-    lastBossHitSwing.current = -1;
-    hitTimer.current = 0;
-    bossAttackTimer.current = 2;
-    victorySent.current = false;
-  }, [runId, level]);
-const hasBoss = level.name === 'Level 1';
   useFrame((_, delta) => {
     const dt = Math.min(delta, MAX_FRAME_STEP);
 
-    // Boss encounter exists only in Level 1
-    const hasBoss = level.name === 'Level 1';
-
-    // Trigger boss introduction
+    // Boss introduction
     if (
       active &&
       hasBoss &&
       !bossTriggered &&
-      sim.player.x >= BOSS_TRIGGER_X
+      sim.player.x >= BOSS_X
     ) {
       setBossTriggered(true);
       onBossTrigger();
     }
 
-    // Boss hit visual timer
+    // Boss hit animation
     if (hitTimer.current > 0) {
       hitTimer.current -= dt;
 
@@ -107,7 +102,7 @@ const hasBoss = level.name === 'Level 1';
       }
     }
 
-    // Main game simulation
+    // Main simulation
     if (
       active &&
       (!bossTriggered || bossFightStarted) &&
@@ -132,74 +127,63 @@ const hasBoss = level.name === 'Level 1';
 
       const player = sim.player;
 
-      // Forest Guardian combat
-      if (hasBoss && bossTriggered && bossFightStarted) {
+      // Sword attacks
+      if (
+        hasBoss &&
+        bossTriggered &&
+        bossFightStarted &&
+        player.swingTime >= 0.15 &&
+        player.swingTime <= 0.35 &&
+        player.swingId !== lastBossHitSwing.current
+      ) {
+        const dx = BOSS_X - player.x;
+        const facingBoss = dx * player.facing > 0;
+        const inRange = Math.abs(dx) <= BOSS_REACH;
 
-        // Player sword attacks boss
-        if (
-          player.swingTime >= 0.15 &&
-          player.swingTime <= 0.35 &&
-          player.swingId !== lastBossHitSwing.current
-        ) {
-          const dx = BOSS_POSITION_X - player.x;
-          const facingBoss = dx * player.facing > 0;
-          const inRange = Math.abs(dx) <= BOSS_REACH;
+        if (facingBoss && inRange && player.y < 2.5) {
+          lastBossHitSwing.current = player.swingId;
 
-          if (facingBoss && inRange && player.y < 2.5) {
-            lastBossHitSwing.current = player.swingId;
-
-            const nextHealth = Math.max(
-              0,
-              bossHealth - BOSS_DAMAGE
-            );
-
-            setBossHealth(nextHealth);
-            setBossHit(true);
-            hitTimer.current = 0.25;
-
-            if (
-              nextHealth <= 0 &&
-              !victorySent.current
-            ) {
-              victorySent.current = true;
-              setBossDefeated(true);
-              onEvent({ type: 'won' });
-            }
-          }
-        }
-
-        // Boss attacks player
-        if (!bossDefeated) {
-          bossAttackTimer.current -= dt;
-
-          const distanceToBoss = Math.abs(
-            player.x - BOSS_POSITION_X
+          const nextHealth = Math.max(
+            0,
+            bossHealth - BOSS_DAMAGE
           );
 
-          if (
-            bossAttackTimer.current <= 0 &&
-            distanceToBoss <= 3 &&
-            player.y < 2
-          ) {
-            const attackEvents: SimEvent[] = [];
+          setBossHealth(nextHealth);
+          setBossHit(true);
+          hitTimer.current = 0.25;
 
-            hurtPlayer(
-              sim,
-              BOSS_POSITION_X,
-              attackEvents
-            );
-
-            for (const event of attackEvents) {
-              if (
-                event.type === 'hurt' ||
-                event.type === 'defeated'
-              ) {
-                onEvent(event);
-              }
-            }
-
-            bossAttackTimer.current = 2.5;
+          if (nextHealth <= 0 && !victorySent.current) {
+            victorySent.current = true;
+            setBossDefeated(true);
+            onEvent({ type: 'won' });
           }
+        }
+      }
+
+      // Boss attacks
+      if (hasBoss && bossTriggered && bossFightStarted) {
+        bossAttackTimer.current -= dt;
+
+        const distanceToBoss = Math.abs(player.x - BOSS_X);
+
+        if (
+          bossAttackTimer.current <= 0 &&
+          distanceToBoss <= 3 &&
+          player.y < 2
+        ) {
+          const attackEvents: SimEvent[] = [];
+          hurtPlayer(sim, BOSS_X, attackEvents);
+
+          for (const event of attackEvents) {
+            if (
+              event.type === 'hurt' ||
+              event.type === 'defeated'
+            ) {
+              onEvent(event);
+            }
+          }
+
+          bossAttackTimer.current = 2.5;
         }
       }
     }
@@ -212,9 +196,11 @@ const hasBoss = level.name === 'Level 1';
 
     const targetFov = portrait ? 55 : 46;
 
-    if (camera.fov !== targetFov) {
-      camera.fov = targetFov;
-      camera.updateProjectionMatrix();
+    if (camera instanceof PerspectiveCamera) {
+      if (camera.fov !== targetFov) {
+        camera.fov = targetFov;
+        camera.updateProjectionMatrix();
+      }
     }
 
     const follow =
@@ -260,7 +246,7 @@ const hasBoss = level.name === 'Level 1';
 
       {hasBoss && bossTriggered && (
         <ForestGuardian
-          position={[BOSS_POSITION_X, 0, -3]}
+          position={[BOSS_X, 0, -3]}
           health={bossHealth}
           maxHealth={BOSS_MAX_HEALTH}
           hit={bossHit}
