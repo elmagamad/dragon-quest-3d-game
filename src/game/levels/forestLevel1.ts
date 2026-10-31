@@ -1,16 +1,28 @@
+
 import type { LevelDef, Vec2 } from '@/game/types';
 
-function coinLine(x0: number, x1: number, step: number, y: number): Vec2[] {
+function coinLine(
+  x0: number,
+  x1: number,
+  step: number,
+  y: number
+): Vec2[] {
   const coins: Vec2[] = [];
+
   for (let x = x0; x <= x1 + 1e-6; x += step) {
-    coins.push({ x: Number(x.toFixed(2)), y });
+    coins.push({
+      x: Number(x.toFixed(2)),
+      y,
+    });
   }
+
   return coins;
 }
 
 export const forestLevel1: LevelDef = {
   name: 'Level 1',
   world: 'World 1: Enchanted Forest',
+
   platforms: [
     { x: 0, y: 0, w: 18 },
     { x: 17, y: 0, w: 10 },
@@ -24,7 +36,18 @@ export const forestLevel1: LevelDef = {
     { x: 97, y: 1.5, w: 3 },
     { x: 112, y: 0, w: 22 },
   ],
-  walls: [{ minX: -12, maxX: -9.6, minY: -5, maxY: 30, minZ: -3, maxZ: 3 }],
+
+  walls: [
+    {
+      minX: -12,
+      maxX: -9.6,
+      minY: -5,
+      maxY: 30,
+      minZ: -3,
+      maxZ: 3,
+    },
+  ],
+
   coins: [
     ...coinLine(-6, 6, 3, 1.3),
     ...coinLine(13, 21, 2, 1.3),
@@ -39,6 +62,7 @@ export const forestLevel1: LevelDef = {
     ...coinLine(95.5, 98.5, 1.5, 2.8),
     ...coinLine(102, 122, 4, 1.3),
   ],
+
   enemies: [
     { platform: 0, x: 4, range: 4 },
     { platform: 1, x: 17, range: 4 },
@@ -51,6 +75,7 @@ export const forestLevel1: LevelDef = {
     { platform: 10, x: 112, range: 6 },
     { platform: 10, x: 104, range: 2.5, kind: 'brute' },
   ],
+
   checkpoints: [
     { x: -6, y: 0 },
     { x: 14, y: 0 },
@@ -62,6 +87,16 @@ export const forestLevel1: LevelDef = {
     { x: 97, y: 1.5 },
     { x: 113, y: 0 },
   ],
+
   spawn: { x: -6, y: 0 },
+
   portal: { x: 117, y: 0 },
+
+  boss: {
+    name: 'Forest Guardian',
+    health: 100,
+    damage: 10,
+    reward: 500,
+    position: 100,
+  },
 };
