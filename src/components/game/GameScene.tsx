@@ -135,6 +135,8 @@ export function GameScene({
 
           if (nextHealth <= 0) {
   setBossDefeated(true);
+  onEvent({ type: 'won' });
+}
   onEvent({ type: 'boss-defeated' } as SimEvent);
 }
           }
