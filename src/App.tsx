@@ -1,13 +1,17 @@
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState }from 'react';
+
 import { GameCanvas } from '@/components/game/GameCanvas';
 import { GameHud } from '@/components/hud/GameHud';
 import { GameOverlay, type OverlayKind } from '@/components/hud/GameOverlay';
 import { TouchControls } from '@/components/hud/TouchControls';
+
 import { MAX_HEALTH } from '@/game/constants';
 import { createInputState, useGameControls } from '@/game/input';
+
 import { forestLevel1 } from '@/game/levels/forestLevel1';
 import { forestLevel2 } from '@/game/levels/forestLevel2';
+
 import type { LevelDef, SimEvent } from '@/game/types';
 
 type Status = OverlayKind | 'playing' | 'select';
@@ -18,11 +22,16 @@ const LEVELS_KEY = 'dragonQuestUnlockedLevels';
 
 function App() {
   const [input] = useState(createInputState);
+
   const [status, setStatus] = useState<Status>('ready');
   const [runId, setRunId] = useState(0);
+
   const [health, setHealth] = useState(MAX_HEALTH);
   const [coins, setCoins] = useState(0);
+
   const [selectedLevel, setSelectedLevel] = useState(1);
+
+  const [devMenuVisible, setDevMenuVisible] = useState(false);
 
   const [wallet, setWallet] = useState(() => {
     return Number(localStorage.getItem(WALLET_KEY)) || 0;
@@ -62,41 +71,62 @@ function App() {
     setRunId((id) => id + 1);
     setHealth(MAX_HEALTH);
     setCoins(0);
+    setDevMenuVisible(false);
     setStatus('playing');
   }, []);
 
-  const handleEvent = useCallback((event: SimEvent) => {
-    switch (event.type) {
-      case 'coin':
-        setCoins((count) => count + event.amount);
-        setWallet((current) => current + event.amount);
-        break;
+  const handleEvent = useCallback(
+    (event: SimEvent) => {
+      switch (event.type) {
+        case 'coin':
+          setCoins((count) => count + event.amount);
+          setWallet((current) => current + event.amount);
+          break;
 
-      case 'hurt':
-        setHealth(event.health);
-        break;
+        case 'hurt':
+          setHealth(event.health);
+          break;
 
-      case 'won':
-        if (selectedLevel === 1) {
-          setWallet((current) => current + BONUS_COINS);
-          setUnlockedLevels((current) =>
-            current.includes(2) ? current : [...current, 2]
-          );
-        }
-        setStatus('complete');
-        break;
+        case 'won':
+          if (selectedLevel === 1) {
+            setWallet((current) => current + BONUS_COINS);
 
-      case 'defeated':
-        setStatus('defeated');
-        break;
-    }
-  }, [selectedLevel]);
+            setUnlockedLevels((current) =>
+              current.includes(2)
+                ? current
+                : [...current, 2]
+            );
+          }
+
+          setDevMenuVisible(false);
+          setStatus('complete');
+          break;
+
+        case 'defeated':
+          setDevMenuVisible(false);
+          setStatus('defeated');
+          break;
+      }
+    },
+    [selectedLevel]
+  );
+
+  const sendDevCommand = (command: string) => {
+    window.dispatchEvent(
+      new CustomEvent('dragon-dev-command', {
+        detail: command,
+      })
+    );
+
+    setDevMenuVisible(false);
+  };
 
   const playing = status === 'playing';
 
   return (
     <div className="fixed left-0 top-0 h-[100dvh] w-[100vw] touch-none select-none overflow-hidden overscroll-none bg-sky-200">
 
+      {/* Level Selection */}
       {status === 'select' && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950 p-5">
           <div className="w-full max-w-md rounded-3xl bg-slate-900 p-6 text-white shadow-2xl">
@@ -111,8 +141,12 @@ function App() {
               </h1>
 
               <div className="mt-4 rounded-xl bg-black/40 p-3">
-                <p className="text-sm text-amber-300">Your Wallet</p>
-                <p className="text-2xl font-black">🪙 {wallet}</p>
+                <p className="text-sm text-amber-300">
+                  Your Wallet
+                </p>
+                <p className="text-2xl font-black">
+                  🪙 {wallet}
+                </p>
               </div>
             </div>
 
@@ -125,7 +159,9 @@ function App() {
                 }}
                 className="w-full rounded-2xl border-2 border-emerald-400 bg-emerald-900/50 p-4 text-left transition hover:bg-emerald-800"
               >
-                <div className="text-lg font-bold">🌲 Level 1</div>
+                <div className="text-lg font-bold">
+                  🌲 Level 1
+                </div>
                 <div className="text-sm text-emerald-200">
                   Enchanted Forest · Unlocked
                 </div>
@@ -156,7 +192,6 @@ function App() {
                     : 'Defeat Forest Guardian to unlock'}
                 </div>
               </button>
-
             </div>
 
             <button
@@ -165,11 +200,11 @@ function App() {
             >
               Back
             </button>
-
           </div>
         </div>
       )}
 
+      {/* Game */}
       <GameCanvas
         active={playing}
         runId={runId}
@@ -185,10 +220,12 @@ function App() {
             health={health}
             coins={coins}
           />
+
           <TouchControls input={input} />
         </>
       )}
 
+      {/* Game Overlay */}
       {!playing && status !== 'select' && (
         <GameOverlay
           kind={status}
@@ -202,6 +239,7 @@ function App() {
         />
       )}
 
+      {/* Select Level Button */}
       {!playing && status === 'ready' && (
         <button
           onClick={() => setStatus('select')}
@@ -211,13 +249,95 @@ function App() {
         </button>
       )}
 
-      <div className="absolute right-3 top-3 z-40 rounded-xl bg-black/70 px-4 py-2 text-white">
-        <div className="text-xs text-yellow-300">TOTAL WALLET</div>
-        <div className="text-lg font-bold">🪙 {wallet}</div>
+      {/* Wallet */}
+      <div className="fixed right-3 top-3 z-[60] rounded-xl bg-black/70 px-4 py-2 text-white">
+        <div className="text-xs text-yellow-300">
+          TOTAL WALLET
+        </div>
+        <div className="text-lg font-bold">
+          🪙 {wallet}
+        </div>
       </div>
+
+      {/* Developer Button - Outside Canvas */}
+      {playing && (
+        <button
+          type="button"
+          onClick={() => setDevMenuVisible(true)}
+          className="fixed right-3 top-[72px] flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-yellow-400 bg-slate-900 text-3xl text-yellow-400 shadow-2xl"
+          style={{
+            zIndex: 999999,
+            pointerEvents: 'auto',
+            touchAction: 'manipulation',
+          }}
+        >
+          ⚙️
+        </button>
+      )}
+
+      {/* Developer Menu */}
+      {playing && devMenuVisible && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black/85 p-4"
+          style={{
+            zIndex: 1000000,
+            pointerEvents: 'auto',
+          }}
+        >
+          <div className="max-h-[90dvh] w-full max-w-sm overflow-y-auto rounded-3xl border-2 border-yellow-400 bg-slate-900 p-5 text-white shadow-2xl">
+
+            <h2 className="mb-2 text-center text-2xl font-black text-yellow-400">
+              🛠 Developer Menu
+            </h2>
+
+            <p className="mb-5 text-center text-xs text-slate-400">
+              GAME TESTING TOOLS
+            </p>
+
+            <button
+              onClick={() => sendDevCommand('boss')}
+              className={devButton}
+            >
+              🌀 Teleport to Boss
+            </button>
+
+            <button
+              onClick={() => sendDevCommand('god')}
+              className={devButton}
+            >
+              🛡️ Toggle God Mode
+            </button>
+
+            <button
+              onClick={() => sendDevCommand('kill')}
+              className={devButton}
+            >
+              ⚔️ Instant Kill Boss
+            </button>
+
+            <button
+              onClick={() => sendDevCommand('complete')}
+              className={`${devButton} !bg-green-800`}
+            >
+              🏆 Complete Level
+            </button>
+
+            <button
+              onClick={() => setDevMenuVisible(false)}
+              className={`${devButton} !mb-0 !bg-slate-700`}
+            >
+              ✖ Close Menu
+            </button>
+
+          </div>
+        </div>
+      )}
 
     </div>
   );
 }
 
+const devButton =
+  'mb-3 block w-full rounded-xl border border-slate-600 bg-slate-800 p-4 text-left text-sm font-bold text-white active:scale-95';
+  
 export default App;
