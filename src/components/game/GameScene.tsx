@@ -1,14 +1,19 @@
+
 import { useMemo, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { PerspectiveCamera, Vector3 } from 'three';
+
 import { Coin } from '@/components/game/pickups/Coin';
 import { Portal } from '@/components/game/pickups/Portal';
 import { Knight } from '@/components/game/characters/Knight';
 import { Brute } from '@/components/game/characters/Brute';
 import { Thornling } from '@/components/game/characters/Thornling';
+import { ForestGuardian } from '@/components/game/ForestGuardian';
+
 import { Fireflies } from '@/components/game/world/Fireflies';
 import { ForestDecor } from '@/components/game/world/ForestDecor';
 import { Platforms } from '@/components/game/world/Platforms';
+
 import type { InputState } from '@/game/input';
 import { forestLevel1 } from '@/game/levels/forestLevel1';
 import { createSim, stepSim } from '@/game/simulation';
@@ -25,19 +30,28 @@ interface GameSceneProps {
 
 export function GameScene({ active, input, onEvent }: GameSceneProps) {
   const [sim] = useState(() => createSim(forestLevel1));
-  const camera = useThree((state) => state.camera) as PerspectiveCamera;
+
+  const camera = useThree(
+    (state) => state.camera
+  ) as PerspectiveCamera;
+
   const viewport = useThree((state) => state.size);
   const focus = useMemo(() => new Vector3(), []);
 
   useFrame((_, delta) => {
     const dt = Math.min(delta, MAX_FRAME_STEP);
+
     if (active) {
-      for (const event of stepSim(sim, input, dt)) onEvent(event);
+      for (const event of stepSim(sim, input, dt)) {
+        onEvent(event);
+      }
     }
 
     const { player } = sim;
+
     const portrait = viewport.width / viewport.height < 0.8;
     const targetFov = portrait ? 55 : 46;
+
     if (camera.fov !== targetFov) {
       camera.fov = targetFov;
       camera.updateProjectionMatrix();
@@ -46,6 +60,7 @@ export function GameScene({ active, input, onEvent }: GameSceneProps) {
     const follow = 1 - Math.exp(-CAMERA_SMOOTHING * dt);
     const distance = portrait ? 13 : 10.5;
     const height = portrait ? 2.8 : 3.4;
+
     camera.position.x += (player.x - camera.position.x) * follow;
     camera.position.y += (player.y + height - camera.position.y) * follow;
     camera.position.z += (distance - camera.position.z) * follow;
@@ -59,18 +74,28 @@ export function GameScene({ active, input, onEvent }: GameSceneProps) {
       <Platforms platforms={sim.level.platforms} />
       <ForestDecor platforms={sim.level.platforms} />
       <Fireflies />
+
       <Knight player={sim.player} />
+
       {sim.enemies.map((enemy, i) =>
         enemy.kind === 'brute' ? (
           <Brute key={i} enemy={enemy} />
         ) : (
           <Thornling key={i} enemy={enemy} />
-        ),
+        )
       )}
+
       {sim.coins.map((coin, i) => (
         <Coin key={i} coin={coin} />
       ))}
-      <Portal position={sim.level.portal} enemies={sim.enemies} />
+
+      {/* Forest Guardian Boss */}
+      <ForestGuardian position={[12, 0, -2]} />
+
+      <Portal
+        position={sim.level.portal}
+        enemies={sim.enemies}
+      />
     </>
   );
 }
