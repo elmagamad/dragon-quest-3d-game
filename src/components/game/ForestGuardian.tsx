@@ -7,16 +7,20 @@ interface ForestGuardianProps {
   position?: [number, number, number];
   defeated?: boolean;
   hit?: boolean;
+  health?: number;
+  maxHealth?: number;
 }
 
 export function ForestGuardian({
   position = [0, 0, -8],
   defeated = false,
   hit = false,
+  health = 100,
+  maxHealth = 100,
 }: ForestGuardianProps) {
   const guardian = useRef<Group>(null);
 
-  useFrame((state, delta) => {
+  useFrame((state) => {
     if (!guardian.current || defeated) return;
 
     const time = state.clock.elapsedTime;
@@ -25,19 +29,29 @@ export function ForestGuardian({
     guardian.current.position.y =
       position[1] + Math.sin(time * 1.5) * 0.15;
 
-    if (hit) {
-      guardian.current.position.x =
-        position[0] + Math.sin(time * 35) * 0.08;
-    } else {
-      guardian.current.position.x = position[0];
-    }
+    guardian.current.position.x = hit
+      ? position[0] + Math.sin(time * 35) * 0.08
+      : position[0];
   });
 
   const bodyColor = hit ? '#ff7777' : '#315b35';
   const headColor = hit ? '#ffaaaa' : '#527c3e';
+  const healthPercent = Math.max(0, Math.min(100, (health / maxHealth) * 100));
 
   return (
     <group ref={guardian} position={position}>
+      {/* Boss Health Bar Background */}
+      <mesh position={[0, 5.2, 0]}>
+        <boxGeometry args={[3.6, 0.22, 0.08]} />
+        <meshBasicMaterial color="#1a0a0a" />
+      </mesh>
+
+      {/* Boss Health Bar */}
+      <mesh position={[-1.8 + (healthPercent / 100) * 1.8, 5.2, 0.05]}>
+        <boxGeometry args={[3.6 * (healthPercent / 100), 0.16, 0.1]} />
+        <meshBasicMaterial color="#ff2020" />
+      </mesh>
+
       {/* Body */}
       <mesh position={[0, 1.8, 0]} castShadow>
         <cylinderGeometry args={[0.9, 1.2, 2, 6]} />
