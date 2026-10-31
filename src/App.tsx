@@ -1,4 +1,5 @@
 
+
 import { useCallback, useEffect, useState } from 'react';
 
 import { GameCanvas } from '@/components/game/GameCanvas';
@@ -11,6 +12,7 @@ import { createInputState, useGameControls } from '@/game/input';
 
 import { forestLevel1 } from '@/game/levels/forestLevel1';
 import { forestLevel2 } from '@/game/levels/forestLevel2';
+import { dragonLevel3 } from '@/game/levels/dragonLevel3';
 
 import type { LevelDef, SimEvent } from '@/game/types';
 
@@ -68,6 +70,7 @@ function App() {
   const levels: Record<number, LevelDef> = {
     1: forestLevel1,
     2: forestLevel2,
+    3: dragonLevel3,
   };
 
   const currentLevel = levels[selectedLevel] ?? forestLevel1;
@@ -250,23 +253,31 @@ function App() {
               </button>
 
               {/* Level 3 */}
-              <div
-                className={`w-full rounded-2xl border-2 p-4 text-left ${
+              <button
+                disabled={!unlockedLevels.includes(3)}
+                onClick={() => {
+                  setSelectedLevel(3);
+                  setStatus('ready');
+                }}
+                className={`w-full rounded-2xl border-2 p-4 text-left transition ${
                   unlockedLevels.includes(3)
-                    ? 'border-purple-400 bg-purple-900/30'
+                    ? 'border-purple-400 bg-purple-900/40 hover:bg-purple-800'
                     : 'border-slate-700 bg-slate-800 opacity-60'
                 }`}
               >
                 <div className="text-lg font-bold">
                   {unlockedLevels.includes(3)
-                    ? '🐉 Level 3 Unlocked!'
+                    ? '🐉 Level 3'
                     : '🔒 Level 3'}
                 </div>
 
                 <div className="text-sm text-slate-300">
-                  Dragon's Kingdom · Coming Soon
+                  Dragon's Kingdom ·{' '}
+                  {unlockedLevels.includes(3)
+                    ? 'Unlocked'
+                    : 'Defeat Shadow Beast to unlock'}
                 </div>
-              </div>
+              </button>
 
             </div>
 
@@ -420,3 +431,4 @@ const devButton =
   'mb-3 block w-full rounded-xl border border-slate-600 bg-slate-800 p-4 text-left text-sm font-bold text-white active:scale-95';
 
 export default App;
+ 
