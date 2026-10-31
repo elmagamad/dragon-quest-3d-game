@@ -30,6 +30,8 @@ interface GameSceneProps {
 
 export function GameScene({ active, input, onEvent }: GameSceneProps) {
   const [sim] = useState(() => createSim(forestLevel1));
+const [bossTriggered, setBossTriggered] = useState(false);
+const [bossMessage, setBossMessage] = useState(false);
 
   const camera = useThree(
     (state) => state.camera
