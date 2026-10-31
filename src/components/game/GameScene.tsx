@@ -134,7 +134,9 @@ export function GameScene({
           hitTimer.current = 0.25;
 
           if (nextHealth <= 0) {
-            setBossDefeated(true);
+  setBossDefeated(true);
+  onEvent({ type: 'boss-defeated' } as SimEvent);
+}
           }
         }
       }
