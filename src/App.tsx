@@ -1,5 +1,5 @@
 
-import { useCallback, useEffect, useState }from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { GameCanvas } from '@/components/game/GameCanvas';
 import { GameHud } from '@/components/hud/GameHud';
@@ -16,9 +16,9 @@ import type { LevelDef, SimEvent } from '@/game/types';
 
 type Status = OverlayKind | 'playing' | 'select';
 
-const BONUS_COINS = 500;
 const WALLET_KEY = 'dragonQuestWallet';
 const LEVELS_KEY = 'dragonQuestUnlockedLevels';
+const REWARDS_KEY = 'dragonQuestClaimedRewards';
 
 function App() {
   const [input] = useState(createInputState);
@@ -33,20 +33,38 @@ function App() {
 
   const [devMenuVisible, setDevMenuVisible] = useState(false);
 
+  // Persistent wallet
   const [wallet, setWallet] = useState(() => {
     return Number(localStorage.getItem(WALLET_KEY)) || 0;
   });
 
+  // Persistent unlocked levels
   const [unlockedLevels, setUnlockedLevels] = useState<number[]>(() => {
     try {
-      return JSON.parse(
+      const saved = JSON.parse(
         localStorage.getItem(LEVELS_KEY) || '[1]'
+      );
+
+      return Array.from(
+        new Set([1, ...saved])
       );
     } catch {
       return [1];
     }
   });
 
+  // Persistent claimed level rewards
+  const [claimedRewards, setClaimedRewards] = useState<number[]>(() => {
+    try {
+      return JSON.parse(
+        localStorage.getItem(REWARDS_KEY) || '[]'
+      );
+    } catch {
+      return [];
+    }
+  });
+
+  // Available playable levels
   const levels: Record<number, LevelDef> = {
     1: forestLevel1,
     2: forestLevel2,
@@ -54,10 +72,15 @@ function App() {
 
   const currentLevel = levels[selectedLevel] ?? forestLevel1;
 
+  // Save wallet
   useEffect(() => {
-    localStorage.setItem(WALLET_KEY, String(wallet));
+    localStorage.setItem(
+      WALLET_KEY,
+      String(wallet)
+    );
   }, [wallet]);
 
+  // Save unlocked levels
   useEffect(() => {
     localStorage.setItem(
       LEVELS_KEY,
@@ -65,8 +88,17 @@ function App() {
     );
   }, [unlockedLevels]);
 
+  // Save claimed rewards
+  useEffect(() => {
+    localStorage.setItem(
+      REWARDS_KEY,
+      JSON.stringify(claimedRewards)
+    );
+  }, [claimedRewards]);
+
   useGameControls(input);
 
+  // Start a new run
   const startRun = useCallback(() => {
     setRunId((id) => id + 1);
     setHealth(MAX_HEALTH);
@@ -75,6 +107,7 @@ function App() {
     setStatus('playing');
   }, []);
 
+  // Handle game events
   const handleEvent = useCallback(
     (event: SimEvent) => {
       switch (event.type) {
@@ -87,20 +120,38 @@ function App() {
           setHealth(event.health);
           break;
 
-        case 'won':
-          if (selectedLevel === 1) {
-            setWallet((current) => current + BONUS_COINS);
+        case 'won': {
+          const reward =
+            currentLevel.boss?.reward ??
+            (selectedLevel === 1 ? 500 : 0);
 
-            setUnlockedLevels((current) =>
-              current.includes(2)
+          // Claim each level's victory reward only once
+          if (!claimedRewards.includes(selectedLevel)) {
+            if (reward > 0) {
+              setWallet((current) => current + reward);
+            }
+
+            setClaimedRewards((current) =>
+              current.includes(selectedLevel)
                 ? current
-                : [...current, 2]
+                : [...current, selectedLevel]
             );
           }
 
+          // Unlock the next level
+          const nextLevel = selectedLevel + 1;
+
+          setUnlockedLevels((current) =>
+            current.includes(nextLevel)
+              ? current
+              : [...current, nextLevel]
+          );
+
           setDevMenuVisible(false);
           setStatus('complete');
+
           break;
+        }
 
         case 'defeated':
           setDevMenuVisible(false);
@@ -108,9 +159,10 @@ function App() {
           break;
       }
     },
-    [selectedLevel]
+    [selectedLevel, currentLevel, claimedRewards]
   );
 
+  // Developer commands
   const sendDevCommand = (command: string) => {
     window.dispatchEvent(
       new CustomEvent('dragon-dev-command', {
@@ -144,6 +196,7 @@ function App() {
                 <p className="text-sm text-amber-300">
                   Your Wallet
                 </p>
+
                 <p className="text-2xl font-black">
                   🪙 {wallet}
                 </p>
@@ -152,6 +205,7 @@ function App() {
 
             <div className="mt-6 space-y-3">
 
+              {/* Level 1 */}
               <button
                 onClick={() => {
                   setSelectedLevel(1);
@@ -162,11 +216,13 @@ function App() {
                 <div className="text-lg font-bold">
                   🌲 Level 1
                 </div>
+
                 <div className="text-sm text-emerald-200">
                   Enchanted Forest · Unlocked
                 </div>
               </button>
 
+              {/* Level 2 */}
               <button
                 disabled={!unlockedLevels.includes(2)}
                 onClick={() => {
@@ -192,6 +248,26 @@ function App() {
                     : 'Defeat Forest Guardian to unlock'}
                 </div>
               </button>
+
+              {/* Level 3 */}
+              <div
+                className={`w-full rounded-2xl border-2 p-4 text-left ${
+                  unlockedLevels.includes(3)
+                    ? 'border-purple-400 bg-purple-900/30'
+                    : 'border-slate-700 bg-slate-800 opacity-60'
+                }`}
+              >
+                <div className="text-lg font-bold">
+                  {unlockedLevels.includes(3)
+                    ? '🐉 Level 3 Unlocked!'
+                    : '🔒 Level 3'}
+                </div>
+
+                <div className="text-sm text-slate-300">
+                  Dragon's Kingdom · Coming Soon
+                </div>
+              </div>
+
             </div>
 
             <button
@@ -200,11 +276,12 @@ function App() {
             >
               Back
             </button>
+
           </div>
         </div>
       )}
 
-      {/* Game */}
+      {/* Game Canvas */}
       <GameCanvas
         active={playing}
         runId={runId}
@@ -213,6 +290,7 @@ function App() {
         level={currentLevel}
       />
 
+      {/* Gameplay HUD */}
       {playing && (
         <>
           <GameHud
@@ -254,12 +332,13 @@ function App() {
         <div className="text-xs text-yellow-300">
           TOTAL WALLET
         </div>
+
         <div className="text-lg font-bold">
           🪙 {wallet}
         </div>
       </div>
 
-      {/* Developer Button - Outside Canvas */}
+      {/* Developer Button */}
       {playing && (
         <button
           type="button"
@@ -339,5 +418,5 @@ function App() {
 
 const devButton =
   'mb-3 block w-full rounded-xl border border-slate-600 bg-slate-800 p-4 text-left text-sm font-bold text-white active:scale-95';
-  
+
 export default App;
