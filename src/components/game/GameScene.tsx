@@ -9,7 +9,6 @@ import { Knight } from '@/components/game/characters/Knight';
 import { Brute } from '@/components/game/characters/Brute';
 import { Thornling } from '@/components/game/characters/Thornling';
 import { ForestGuardian } from '@/components/game/ForestGuardian';
-import { BossIntro } from '@/components/game/BossIntro';
 
 import { Fireflies } from '@/components/game/world/Fireflies';
 import { ForestDecor } from '@/components/game/world/ForestDecor';
@@ -28,13 +27,19 @@ interface GameSceneProps {
   active: boolean;
   input: InputState;
   onEvent: (event: SimEvent) => void;
+  bossFightStarted: boolean;
+  onBossTrigger: () => void;
 }
 
-export function GameScene({ active, input, onEvent }: GameSceneProps) {
+export function GameScene({
+  active,
+  input,
+  onEvent,
+  bossFightStarted,
+  onBossTrigger,
+}: GameSceneProps) {
   const [sim] = useState(() => createSim(forestLevel1));
   const [bossTriggered, setBossTriggered] = useState(false);
-  const [bossMessage, setBossMessage] = useState(false);
-  const [bossFightStarted, setBossFightStarted] = useState(false);
 
   const camera = useThree(
     (state) => state.camera
@@ -48,10 +53,10 @@ export function GameScene({ active, input, onEvent }: GameSceneProps) {
 
     if (active && !bossTriggered && sim.player.x >= BOSS_TRIGGER_X) {
       setBossTriggered(true);
-      setBossMessage(true);
+      onBossTrigger();
     }
 
-    if (active && !bossMessage) {
+    if (active && (!bossTriggered || bossFightStarted)) {
       for (const event of stepSim(sim, input, dt)) {
         onEvent(event);
       }
@@ -67,7 +72,7 @@ export function GameScene({ active, input, onEvent }: GameSceneProps) {
       camera.updateProjectionMatrix();
     }
 
-    const follow = 1 - Math.exp(-CAMERA_SMOOTHING * dt);
+    const follow = 1 - Math.exp(-CAMERA_SMOOTHING * dt;
     const distance = portrait ? 13 : 10.5;
     const height = portrait ? 2.8 : 3.4;
 
@@ -106,14 +111,6 @@ export function GameScene({ active, input, onEvent }: GameSceneProps) {
       <Portal
         position={sim.level.portal}
         enemies={sim.enemies}
-      />
-
-      <BossIntro
-        show={bossMessage}
-        onComplete={() => {
-          setBossMessage(false);
-          setBossFightStarted(true);
-        }}
       />
     </>
   );
