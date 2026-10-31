@@ -89,8 +89,7 @@ export function GameScene({ active, input, onEvent }: GameSceneProps) {
         <Coin key={i} coin={coin} />
       ))}
 
-      {/* Forest Guardian Boss */}
-      <ForestGuardian position={[12, 0, -2]} />
+      <ForestGuardian position={[0, 0, -3]} />
 
       <Portal
         position={sim.level.portal}
