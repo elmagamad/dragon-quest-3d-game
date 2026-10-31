@@ -39,6 +39,7 @@ export interface BossDef {
 export interface LevelDef {
   name: string;
   world: string;
+  maxJumps?: number;
   platforms: Platform[];
   walls: Box[];
   coins: Vec2[];
