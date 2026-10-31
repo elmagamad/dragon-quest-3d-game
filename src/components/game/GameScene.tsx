@@ -82,7 +82,19 @@ export function GameScene({
       (!bossTriggered || bossFightStarted) &&
       !bossDefeated
     ) {
-      const events = stepSim(sim, input, dt);
+      const events = stepSim(
+  sim,
+  bossTriggered && !bossFightStarted
+    ? {
+        ...input,
+        left: false,
+        right: false,
+        jump: false,
+        attack: false,
+      }
+    : input,
+  dt
+);
 
       for (const event of events) {
         onEvent(event);
