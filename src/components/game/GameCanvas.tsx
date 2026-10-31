@@ -34,7 +34,7 @@ export function GameCanvas({
   const [devMenuVisible, setDevMenuVisible] =
     useState(false);
 
-  const secretTimer = useRef<ReturnType<typeof setTimeout> | null>(
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(
     null
   );
 
@@ -44,20 +44,20 @@ export function GameCanvas({
     setDevMenuVisible(false);
   }, [runId, level]);
 
-  const startSecretPress = () => {
-    secretTimer.current = setTimeout(() => {
+  const startLongPress = () => {
+    pressTimer.current = setTimeout(() => {
       setDevMenuVisible(true);
-    }, 3000);
+    }, 1500);
   };
 
-  const cancelSecretPress = () => {
-    if (secretTimer.current) {
-      clearTimeout(secretTimer.current);
-      secretTimer.current = null;
+  const cancelLongPress = () => {
+    if (pressTimer.current) {
+      clearTimeout(pressTimer.current);
+      pressTimer.current = null;
     }
   };
 
-  const sendDevCommand = (command: string) => {
+  const sendCommand = (command: string) => {
     window.dispatchEvent(
       new CustomEvent('dragon-dev-command', {
         detail: command,
@@ -72,6 +72,7 @@ export function GameCanvas({
         position: 'relative',
         width: '100%',
         height: '100%',
+        overflow: 'hidden',
       }}
     >
       <Canvas
@@ -86,7 +87,6 @@ export function GameCanvas({
         gl={{ antialias: true }}
       >
         <color attach="background" args={[PALETTE.sky]} />
-
         <fog attach="fog" args={[PALETTE.fog, 38, 120]} />
 
         <hemisphereLight
@@ -117,30 +117,33 @@ export function GameCanvas({
         />
       </Canvas>
 
-      {/* Secret Developer Menu Button */}
-      <button
-        onPointerDown={startSecretPress}
-        onPointerUp={cancelSecretPress}
-        onPointerLeave={cancelSecretPress}
-        onContextMenu={(e) => e.preventDefault()}
-        style={{
-          position: 'absolute',
-          top: 12,
-          right: 12,
-          width: 42,
-          height: 42,
-          borderRadius: 12,
-          border: '1px solid rgba(255,255,255,0.15)',
-          background: 'rgba(15,23,42,0.25)',
-          color: 'white',
-          fontSize: 20,
-          opacity: 0.18,
-          zIndex: 20,
-          touchAction: 'none',
-        }}
-      >
-        ⚙️
-      </button>
+      {/* Fixed Secret Developer Button */}
+      {active && (
+        <button
+          onPointerDown={startLongPress}
+          onPointerUp={cancelLongPress}
+          onPointerLeave={cancelLongPress}
+          onContextMenu={(e) => e.preventDefault()}
+          style={{
+            position: 'absolute',
+            top: 70,
+            right: 15,
+            width: 50,
+            height: 50,
+            borderRadius: '50%',
+            border: '2px solid rgba(255,255,255,0.5)',
+            background: 'rgba(17,24,39,0.85)',
+            color: '#fbbf24',
+            fontSize: 24,
+            zIndex: 9999,
+            cursor: 'pointer',
+            touchAction: 'none',
+            boxShadow: '0 4px 15px rgba(0,0,0,0.4)',
+          }}
+        >
+          ⚙️
+        </button>
+      )}
 
       {/* Developer Menu */}
       {devMenuVisible && (
@@ -148,11 +151,11 @@ export function GameCanvas({
           style={{
             position: 'absolute',
             inset: 0,
-            zIndex: 100,
+            zIndex: 10000,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'rgba(0,0,0,0.75)',
+            background: 'rgba(0,0,0,0.8)',
             backdropFilter: 'blur(8px)',
             padding: 20,
           }}
@@ -167,67 +170,38 @@ export function GameCanvas({
               border: '1px solid #374151',
               color: 'white',
               fontFamily: 'sans-serif',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
             }}
           >
-            <h2
-              style={{
-                margin: '0 0 6px',
-                color: '#fbbf24',
-                fontSize: 20,
-              }}
-            >
+            <h2 style={{ color: '#fbbf24', margin: '0 0 5px' }}>
               🛠 Developer Menu
             </h2>
 
-            <p
-              style={{
-                margin: '0 0 18px',
-                color: '#9ca3af',
-                fontSize: 12,
-              }}
-            >
+            <p style={{ color: '#9ca3af', fontSize: 12 }}>
               TESTING TOOLS
             </p>
 
-            <button
-              onClick={() => sendDevCommand('boss')}
-              style={buttonStyle}
-            >
+            <button onClick={() => sendCommand('boss')} style={buttonStyle}>
               🌀 Teleport to Boss
             </button>
 
-            <button
-              onClick={() => sendDevCommand('god')}
-              style={buttonStyle}
-            >
+            <button onClick={() => sendCommand('god')} style={buttonStyle}>
               🛡️ Toggle God Mode
             </button>
 
-            <button
-              onClick={() => sendDevCommand('kill')}
-              style={buttonStyle}
-            >
+            <button onClick={() => sendCommand('kill')} style={buttonStyle}>
               ⚔️ Instant Kill Boss
             </button>
 
             <button
-              onClick={() => sendDevCommand('complete')}
-              style={{
-                ...buttonStyle,
-                background: '#166534',
-              }}
+              onClick={() => sendCommand('complete')}
+              style={{ ...buttonStyle, background: '#166534' }}
             >
               🏆 Complete Level
             </button>
 
             <button
               onClick={() => setDevMenuVisible(false)}
-              style={{
-                ...buttonStyle,
-                marginTop: 8,
-                background: '#374151',
-              }}
+              style={{ ...buttonStyle, background: '#374151' }}
             >
               ✖ Close Menu
             </button>
@@ -259,4 +233,3 @@ const buttonStyle: React.CSSProperties = {
   fontWeight: 600,
   cursor: 'pointer',
 };
-
