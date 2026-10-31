@@ -1,12 +1,19 @@
 
-
 import type { LevelDef, Vec2 } from '@/game/types';
 
-function coinLine(x0: number, x1: number, step: number, y: number): Vec2[] {
+function coinLine(
+  x0: number,
+  x1: number,
+  step: number,
+  y: number
+): Vec2[] {
   const coins: Vec2[] = [];
 
   for (let x = x0; x <= x1 + 1e-6; x += step) {
-    coins.push({ x: Number(x.toFixed(2)), y });
+    coins.push({
+      x: Number(x.toFixed(2)),
+      y,
+    });
   }
 
   return coins;
@@ -88,4 +95,12 @@ export const forestLevel2: LevelDef = {
   spawn: { x: -6, y: 0 },
 
   portal: { x: 136, y: 0 },
+
+  boss: {
+    name: 'Shadow Beast',
+    health: 150,
+    damage: 15,
+    reward: 1000,
+    position: 120,
+  },
 };
