@@ -53,10 +53,14 @@ export function GameScene({
   const [bossDefeated, setBossDefeated] = useState(false);
   const [bossHit, setBossHit] = useState(false);
 
+  const [devMenu, setDevMenu] = useState(false);
+  const [godMode, setGodMode] = useState(false);
+
   const lastBossHitSwing = useRef(-1);
   const hitTimer = useRef(0);
   const bossAttackTimer = useRef(2);
   const victorySent = useRef(false);
+  const secretPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const hasBoss = level.name === 'Level 1';
 
@@ -66,11 +70,69 @@ export function GameScene({
     setBossHealth(BOSS_MAX_HEALTH);
     setBossDefeated(false);
     setBossHit(false);
+    setGodMode(false);
+    setDevMenu(false);
+
     lastBossHitSwing.current = -1;
     hitTimer.current = 0;
     bossAttackTimer.current = 2;
     victorySent.current = false;
   }, [runId, level]);
+
+  useEffect(() => {
+    return () => {
+      if (secretPressTimer.current) {
+        clearTimeout(secretPressTimer.current);
+      }
+    };
+  }, []);
+
+  const openSecretMenu = () => {
+    secretPressTimer.current = setTimeout(() => {
+      setDevMenu(true);
+    }, 3000);
+  };
+
+  const cancelSecretMenu = () => {
+    if (secretPressTimer.current) {
+      clearTimeout(secretPressTimer.current);
+      secretPressTimer.current = null;
+    }
+  };
+
+  const teleportToBoss = () => {
+    sim.player.x = BOSS_X - 3;
+    sim.player.y = 0;
+    sim.player.vx = 0;
+    sim.player.vy = 0;
+
+    setBossTriggered(true);
+    onBossTrigger();
+    setDevMenu(false);
+  };
+
+  const instantKillBoss = () => {
+    if (!hasBoss) return;
+
+    setBossHealth(0);
+    setBossDefeated(true);
+
+    if (!victorySent.current) {
+      victorySent.current = true;
+      onEvent({ type: 'won' });
+    }
+
+    setDevMenu(false);
+  };
+
+  const completeLevel = () => {
+    if (!victorySent.current) {
+      victorySent.current = true;
+      onEvent({ type: 'won' });
+    }
+
+    setDevMenu(false);
+  };
 
   const camera = useThree(
     (state) => state.camera
@@ -82,7 +144,6 @@ export function GameScene({
   useFrame((_, delta) => {
     const dt = Math.min(delta, MAX_FRAME_STEP);
 
-    // Boss introduction
     if (
       active &&
       hasBoss &&
@@ -93,7 +154,6 @@ export function GameScene({
       onBossTrigger();
     }
 
-    // Boss hit animation
     if (hitTimer.current > 0) {
       hitTimer.current -= dt;
 
@@ -102,14 +162,13 @@ export function GameScene({
       }
     }
 
-    // Main simulation
     if (
       active &&
-      (!bossTriggered || bossFightStarted) &&
+      (!bossTriggered || bossFightStarted || devMenu) &&
       !bossDefeated
     ) {
       const safeInput: InputState =
-        bossTriggered && !bossFightStarted
+        devMenu || (bossTriggered && !bossFightStarted)
           ? {
               ...input,
               left: false,
@@ -127,7 +186,6 @@ export function GameScene({
 
       const player = sim.player;
 
-      // Sword attacks
       if (
         hasBoss &&
         bossTriggered &&
@@ -145,7 +203,7 @@ export function GameScene({
 
           const nextHealth = Math.max(
             0,
-            bossHealth - BOSS_DAMAGE
+            bossHealth - (godMode ? BOSS_MAX_HEALTH : BOSS_DAMAGE)
           );
 
           setBossHealth(nextHealth);
@@ -160,13 +218,13 @@ export function GameScene({
         }
       }
 
-      // Boss attacks
       if (hasBoss && bossTriggered && bossFightStarted) {
         bossAttackTimer.current -= dt;
 
         const distanceToBoss = Math.abs(player.x - BOSS_X);
 
         if (
+          !godMode &&
           bossAttackTimer.current <= 0 &&
           distanceToBoss <= 3 &&
           player.y < 2
@@ -188,12 +246,8 @@ export function GameScene({
       }
     }
 
-    // Camera follow
     const player = sim.player;
-
-    const portrait =
-      viewport.width / viewport.height < 0.8;
-
+    const portrait = viewport.width / viewport.height < 0.8;
     const targetFov = portrait ? 55 : 46;
 
     if (camera instanceof PerspectiveCamera) {
@@ -203,20 +257,13 @@ export function GameScene({
       }
     }
 
-    const follow =
-      1 - Math.exp(-CAMERA_SMOOTHING * dt);
-
+    const follow = 1 - Math.exp(-CAMERA_SMOOTHING * dt);
     const distance = portrait ? 13 : 10.5;
     const height = portrait ? 2.8 : 3.4;
 
-    camera.position.x +=
-      (player.x - camera.position.x) * follow;
-
-    camera.position.y +=
-      (player.y + height - camera.position.y) * follow;
-
-    camera.position.z +=
-      (distance - camera.position.z) * follow;
+    camera.position.x += (player.x - camera.position.x) * follow;
+    camera.position.y += (player.y + height - camera.position.y) * follow;
+    camera.position.z += (distance - camera.position.z) * follow;
 
     focus.set(player.x, player.y + 1, 0);
     camera.lookAt(focus);
@@ -225,9 +272,7 @@ export function GameScene({
   return (
     <>
       <Platforms platforms={sim.level.platforms} />
-
       <ForestDecor platforms={sim.level.platforms} />
-
       <Fireflies />
 
       <Knight player={sim.player} />
@@ -242,7 +287,7 @@ export function GameScene({
 
       {sim.coins.map((coin, i) => (
         <Coin key={i} coin={coin} />
-      )}
+      ))}
 
       {hasBoss && bossTriggered && (
         <ForestGuardian
@@ -254,10 +299,25 @@ export function GameScene({
         />
       )}
 
-      <Portal
-        position={sim.level.portal}
-        enemies={sim.enemies}
-      />
+      <Portal position={sim.level.portal} enemies={sim.enemies} />
+
+      {/* Secret Developer Menu Trigger */}
+      <group position={[sim.player.x, sim.player.y + 3, 0]}>
+        <mesh
+          onPointerDown={openSecretMenu}
+          onPointerUp={cancelSecretMenu}
+          onPointerLeave={cancelSecretMenu}
+        >
+          <sphereGeometry args={[0.35, 12, 12]} />
+          <meshBasicMaterial transparent opacity={0} />
+        </mesh>
+      </group>
+
+      {devMenu && (
+        <group>
+          {/* Menu is controlled by the DOM overlay in the next step */}
+        </group>
+      )}
     </>
   );
 }
